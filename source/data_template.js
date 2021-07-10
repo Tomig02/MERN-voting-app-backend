@@ -8,6 +8,7 @@ const user = new mongoose.Schema({
 })
 
 const proposal = new mongoose.Schema({
+    name: 'String',
     description: 'String',
     image: 'String',
     votes: 'Number',
@@ -24,4 +25,8 @@ const schema = new mongoose.Schema({
     fin: 'Boolean'
 }, {collection: "rooms"});
 
-module.exports = {"user": mongoose.model('user', user), "room": mongoose.model('room', schema)};
+module.exports = {
+    "user": mongoose.model('user', user), 
+    "room": mongoose.model('room', schema),
+    "proposal": mongoose.model('proposal', proposal)
+};
