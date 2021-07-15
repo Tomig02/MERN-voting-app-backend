@@ -18,7 +18,7 @@ app.post('/newProposal', async (req, res) => {
         await room.findByIdAndUpdate(roomID, {$push: {"proposals": newProposal}}, {useFindAndModify:false},
             (error, doc) => {
                 if(error){
-                    res.status(402).json(error);
+                    res.status(400).json(error);
                 }
                 else{
                     res.status(200).json(doc);
@@ -36,7 +36,7 @@ app.post('/deleteProposal', (req, res) => {
 
     room.findOneAndUpdate({"proposals._id": propID}, {$pull: {"proposals": {"_id": propID}}}, (error , doc) => {
         if(error){
-            res.status(402).send("error in db during delete");
+            res.status(400).send("error in db during delete");
         }
         else{
             res.status(200).json(doc);
@@ -44,12 +44,46 @@ app.post('/deleteProposal', (req, res) => {
     })
 });
 
-app.post('/voteProposal', (req, res) => {
-    //TODO
+app.post('/voteProposal', async (req, res) => {
+    const {propID, userName} = req.body;
+
+    try{
+        await room.findOneAndUpdate(
+            {"proposals._id": propID}, 
+            {$inc: {"proposals.$.votes": 1}}
+        );
+        doc = await room.findOneAndUpdate(
+            {"proposals._id": propID}, 
+            {$push: {"proposals.$.voters": userName}}, 
+        );
+        
+        res.status(200).json(doc);
+    }
+    catch(err){
+        res.status(400).send("error in db when voting");
+        console.log(err);
+    }
 });
 
-app.post('/undoVote', (req, res) => {
-    //TODO
+app.post('/undoVote', async (req, res) => {
+    const {propID, userName} = req.body;
+    
+    try{
+        await room.findOneAndUpdate(
+            {"proposals._id": propID}, 
+            {$inc: {"proposals.$.votes": -1}}
+        );
+        doc = await room.findOneAndUpdate(
+            {"proposals._id": propID}, 
+            {$pull: {"proposals.$.voters": userName}}, 
+        );
+        
+        res.status(200).json(doc);
+    }
+    catch(err){
+        res.status(400).send("error in db when voting");
+        console.log(err);
+    }
 });
 
 module.exports = app;
