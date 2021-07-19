@@ -3,36 +3,38 @@ const {room, user} = require('../data_template');
 
 const app = express.Router();
 
-app.post('/login', ( req, res) => {
+app.post('/login', async ( req, res) => {
     const { id } = req.body;
 
-    room.findOne({"users._id": id}, (error, success) => {
-        if( error ){
-            console.log(error);
-        }
-        else{
-            res.json(success);
-        }
-    });
+    try{
+        res.status(200).json(await room.findOne({"users._id": id}));
+    } catch(err){
+        console.log(err.reason);
+        res.status(400).send("invalid access key");
+    }
 })
 
 app.post('/createRoom', async (req, res) => {
-    const {name, description, user} = req.body;
+    const {name, description, username, image} = req.body;
 
-    const newUser = await createUser(user, active=true);
+    const newUser = await createUser(username, image, admin=true, active=true);
 
-    if(user & name & description){
-        const newRoom = await room.create({
-            "name": name,
-            "description": description,
-            "admin": user.name,
-            "proposals": [], 
-            "votes": 0,
-            "users": [newUser], 
-            "termino": false}
-        );
-
-        res.json(newRoom);
+    if( Object.values(req.body).every(elem => {return Boolean(elem)})){
+        try{
+            const newRoom = await room.create({
+                "name": name,
+                "description": description,
+                "admin": user.name,
+                "proposals": [], 
+                "votes": 0,
+                "users": [newUser], 
+                "termino": false
+            });
+            res.status(200).json(newRoom);
+        } catch(err){
+            console.log(err.reason);
+            res.status(500).send("there was an error during database access")
+        }
     }
     else{
         res.status(400).send("client error");
@@ -42,15 +44,16 @@ app.post('/createRoom', async (req, res) => {
 });
 
 app.post("/addNewUser", async (req, res) => {
-    const newUser = await createUser(req.body, active=false);
+    const {name, image} = req.body;
+    const newUser = await createUser(name, image, admin=false, active=false);
 
     if(newUser){
         let addedRoom;
         try{
-            addedRoom = await room.updateOne({ _id: req.body.roomID}, { $push: {users: newUser}});
+            addedRoom = await room.findOneAndUpdate({ _id: req.body.roomID}, { $push: {users: newUser}});
         }
         catch(err){
-            res.status(402).json(err);
+            res.status(500).send("error during database access");
         }
 
         res.status(200).json(addedRoom);
@@ -60,16 +63,17 @@ app.post("/addNewUser", async (req, res) => {
     }
 })
 
-async function createUser(data, active){
+async function createUser(name, image, admin, active){
     try{
         return new user({
-            name: data.name,
-            image: data.image,
-            admin: data.admin,
+            name: name,
+            image: image,
+            admin: admin,
             active: active,
         });
+    } catch(err){ 
+        console.log(err) 
     }
-    catch(err){ console.log(err) }
 }
 
 module.exports = app;

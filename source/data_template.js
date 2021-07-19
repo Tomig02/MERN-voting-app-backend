@@ -12,6 +12,7 @@ const proposal = new mongoose.Schema({
     description: 'String',
     image: 'String',
     votes: 'Number',
+    creator: 'String',
     voters: ['String']
 })
 
