@@ -65,10 +65,8 @@ app.post('/vote', async (req, res) => {
         );
         const voters = prop.proposals.find(props => {return String(props._id) == propID}).voters;
 
-        console.log(voters);
         hasVoted = voters.indexOf(userName);
 
-        console.log(hasVoted !== -1);
         if(hasVoted === -1){
             voteProposal(res, propID, userName);
         }else{
@@ -86,6 +84,10 @@ const voteProposal = async (res, propID, username) => {
             {"proposals._id": propID}, 
             {$inc: {"proposals.$.votes": 1}}
         );
+        await room.findOneAndUpdate(
+            {"proposals._id": propID}, 
+            {$inc: {"votes": 1}}
+        );
         doc = await room.findOneAndUpdate(
             {"proposals._id": propID}, 
             {$push: {"proposals.$.voters": username}}, 
@@ -102,7 +104,11 @@ const undoVote = async (res, propID, username) => {
     try{
         await room.findOneAndUpdate(
             {"proposals._id": propID}, 
-            {$inc: {"proposals.$.votes": -1}}
+            {$inc: {"proposals.$.votes": -1}}    
+        );
+        await room.findOneAndUpdate(
+            {"proposals._id": propID}, 
+            {$inc: {"votes": -1}}
         );
         doc = await room.findOneAndUpdate(
             {"proposals._id": propID}, 
