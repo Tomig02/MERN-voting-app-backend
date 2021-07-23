@@ -58,21 +58,27 @@ app.post('/deleteProposal', async (req, res) => {
 app.post('/vote', async (req, res) => {
     const {propID, userName} = req.body;
 
-    let hasVoted = undefined;
     try{
-        const prop = await room.findOne(
-            {"proposals._id": propID}
+        const hasVoted = await room.findOne(
+            {"proposals.voters": userName}
         );
-        const voters = prop.proposals.find(props => {return String(props._id) == propID}).voters;
 
-        hasVoted = voters.indexOf(userName);
-
-        if(hasVoted === -1){
+        if(!hasVoted){
             voteProposal(res, propID, userName);
         }else{
-            undoVote(res, propID, userName);
+            const actPropVoters = hasVoted.proposals.find(
+                props => { return String(props._id) == propID }
+            ).voters;
+            const isSame = actPropVoters.indexOf(userName) !== -1;
+
+            if(isSame){
+                undoVote(res, propID, userName);
+            }else{
+                res.status(400).send("User has already voted in other proposal")
+            }            
         }
     }catch(err){
+        
         console.log(err);
         res.status(500).send("There was an error when looking for the room in the DB")
     }
@@ -80,18 +86,20 @@ app.post('/vote', async (req, res) => {
 
 const voteProposal = async (res, propID, username) => {
     try{
-        await room.findOneAndUpdate(
+        await room.updateOne(
             {"proposals._id": propID}, 
             {$inc: {"proposals.$.votes": 1}}
         );
-        await room.findOneAndUpdate(
+        await room.updateOne(
             {"proposals._id": propID}, 
             {$inc: {"votes": 1}}
         );
-        doc = await room.findOneAndUpdate(
+        await room.updateOne(
             {"proposals._id": propID}, 
             {$push: {"proposals.$.voters": username}}, 
         );
+
+        const doc = await room.findOne({"proposals._id": propID});
         res.status(200).json(doc);
     } catch(err){
         res.status(500).send("error in db when voting");
@@ -102,19 +110,20 @@ const voteProposal = async (res, propID, username) => {
 const undoVote = async (res, propID, username) => {
 
     try{
-        await room.findOneAndUpdate(
+        await room.updateOne(
             {"proposals._id": propID}, 
             {$inc: {"proposals.$.votes": -1}}    
         );
-        await room.findOneAndUpdate(
+        await room.updateOne(
             {"proposals._id": propID}, 
             {$inc: {"votes": -1}}
         );
-        doc = await room.findOneAndUpdate(
+        await room.updateOne(
             {"proposals._id": propID}, 
             {$pull: {"proposals.$.voters": username}}, 
         );
 
+        const doc = await room.findOne({"proposals._id": propID});
         res.status(200).json(doc);
     }
     catch(err){

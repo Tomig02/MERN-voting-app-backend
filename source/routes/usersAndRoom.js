@@ -44,19 +44,17 @@ app.post('/createRoom', async (req, res) => {
 });
 
 app.post("/addNewUser", async (req, res) => {
-    const {name, image} = req.body;
+    const {name, image, roomID} = req.body;
     const newUser = await createUser(name, image, admin=false, active=false);
 
     if(newUser){
-        let addedRoom;
         try{
-            addedRoom = await room.findOneAndUpdate({ _id: req.body.roomID}, { $push: {users: newUser}});
+            await room.updateOne({"_id": roomID}, { $push: {"users": newUser}});
+            res.status(200).json(newUser._id);
         }
         catch(err){
             res.status(500).send("error during database access");
         }
-
-        res.status(200).json(addedRoom);
     }
     else{
         res.status(400).send("user info is incomplete");
