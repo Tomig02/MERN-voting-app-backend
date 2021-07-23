@@ -17,16 +17,15 @@ async function connectDB(){
 }
 connectDB();
 
-// TODO: handle errors and disconnections
-
-
 const app = express();
 
-app.use(cors());
+app.use(cors({
+    origin: process.env.FRONT_END
+}));
 app.use(express.json());
 app.use(routeHandler);
 
-const port = 3001;
+const port = process.env.PORT || 3000;
 app.listen(port, () => {
     console.log('listening to port: ' + port)
 })
